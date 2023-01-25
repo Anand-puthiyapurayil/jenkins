@@ -1,0 +1,39 @@
+@Library('Library_Jenkins') _
+
+node ('master') {
+    def uniqueId = UUID.randomUUID().toString()
+    def path = 'scripts/SPN_RENEWAL/'
+    initialisation(uniqueId)
+    {
+        node (uniqueId) {  
+
+            pythonScript('master', path)   
+
+            container('jnlp'){
+
+                                
+                stage('JENKINS ADMIN RENEWAL'){                    
+
+                    withCredentials([string(credentialsId: 'I568455-admin-JENKINS-TOKEN', variable: 'TOKEN_JENKINS')]) {
+                        sh "python3 ${path}jenkins_admin_renewal.py $TOKEN_JENKINS"
+                    }
+                }
+
+                stage('SPN ADB ADMIN RENEWAL'){                    
+
+                    withCredentials([string(credentialsId: 'I568455-admin-JENKINS-TOKEN', variable: 'TOKEN_JENKINS')]) {
+                        withCredentials([string(credentialsId: 'SPN-admin-TEST-TOKEN', variable: 'TEST_TOKEN_ADB')]) {
+                            sh "python3 ${path}adb_admin_renewal.py 'TEST' $TEST_TOKEN_ADB $TOKEN_JENKINS"
+                        }
+
+                        withCredentials([string(credentialsId: 'SPN-admin-PROD-TOKEN', variable: 'PROD_TOKEN_ADB')]) {
+                            sh "python3 ${path}adb_admin_renewal.py 'PROD' $PROD_TOKEN_ADB $TOKEN_JENKINS"
+                        }
+                    }
+                }
+
+
+            }
+        } 
+    }   
+}

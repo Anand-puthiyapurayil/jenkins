@@ -1,0 +1,41 @@
+pipeline {
+    agent any
+    environment {
+        API_TOKEN = credentials('API_TOKEN')
+        GROUP_NAME = 'GROUP_NAME'
+    }
+    stages {
+        stage('Give read access to jobs') {
+            steps {
+                script {
+                    def job_endpoint = "jobs/list"
+                    def job_list = call_adb_api(endpoint=job_endpoint, token=API_TOKEN, api_env='PROD')["jobs"]
+                    def job_id_list = [job["job_id"] for job in job_list]
+                    give_read_permission("jobs", job_id_list, "view",GROUP_NAME, API_TOKEN, api_env='PROD')
+                }
+            }
+        }
+        stage('Give read access to models') {
+            steps {
+                script {
+                    def model_endpoint = "mlflow/registered-models/list"
+                    def model_list = call_adb_api(endpoint=model_endpoint, token=API_TOKEN, api_env='PROD')["registered_models"]
+                    def adb_model_endpoint = "mlflow/databricks/registered-models/get?name="
+                    def adb_model_endpoint_list = [f"{adb_model_endpoint}{model['name']}" for model in model_list]
+                    def model_id_list = [call_adb_api(adb_model_endpoint, token=API_TOKEN, api_env='PROD')["registered_model_databricks"]["id"] for adb_model_endpoint in adb_model_endpoint_list]
+                    give_read_permission("registered-models", model_id_list, "read",GROUP_NAME, API_TOKEN, api_env='PROD')
+                }
+            }
+        }
+        stage('Give read access to clusters') {
+            steps {
+                script {
+                    def cluster_endpoint = "clusters/list"
+                    def cluster_list = call_adb_api(endpoint=cluster_endpoint, token=API_TOKEN, api_env='PROD')["clusters"]
+                    def cluster_id_list = [cluster["cluster_id"] for cluster in cluster_list]
+                    give_read_permission("clusters", cluster_id_list, "attach_to",GROUP_NAME, API_TOKEN, api_env='PROD')
+                }
+            }
+        }
+    }
+}
